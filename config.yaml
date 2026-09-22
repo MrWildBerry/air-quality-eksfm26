@@ -1,0 +1,21 @@
+data: data/AirQualityUCI.csv
+output: results
+model_seed: 42
+mask_seeds: [17, 42, 101]
+lengths: [6, 24, 72]
+coverage: 0.20
+warmup: 24
+threads: 4
+fit_timeout_seconds: 120
+total_budget_seconds: 7200
+memory_limit_gb: 8
+bootstrap_samples: 1000
+rf:
+  n_estimators: [300]
+  max_depth: [8, 16, null]
+  min_samples_leaf: [2, 5, 10]
+  max_features: [0.7, 1.0]
+svr:
+  C: [1, 10, 100]
+  epsilon: [0.05, 0.20]
+  gamma: [scale, 0.01, 0.1]

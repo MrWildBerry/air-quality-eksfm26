@@ -1,0 +1,11 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+data/
+results/
+results_*/
+predictions/
+*.request
+*.log
+.env
