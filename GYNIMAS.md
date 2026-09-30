@@ -14,11 +14,11 @@ RF koncentracijos įvertis:
 co_hat(x) = max(0, (T_1(x) + ... + T_B(x)) / B)
 ```
 
-Kiekvienas medis, tikrindamas `x[j] <= threshold`, pasiekia lapą. Lapo reikšmė yra mokymo taškų CO vidurkis tame lape, įskaitant bootstrap pasikartojimų svorį. `airquality/models.py:create_model` nustato `bootstrap=True` ir `criterion='squared_error'`. `verify_forest_formula` apskaičiuoja atskirų medžių prognozes ir jų vidurkį, palygina su `model.predict`. `predict` taiko neneigiamumo ribojimą. Realūs palyginimo skaičiai yra `formula_check.json`.
+Kiekvienas medis, tikrindamas `x[j] <= threshold`, pasiekia lapą. Lapo reikšmė yra mokymo taškų CO vidurkis tame lape, įskaitant atrankos su grąžinimu pasikartojimų svorį. `airquality/models.py:create_model` nustato `bootstrap=True` ir `criterion='squared_error'`. `verify_forest_formula` apskaičiuoja atskirų medžių prognozes ir jų vidurkį, palygina su `model.predict`. `predict` taiko neneigiamumo ribojimą. Realūs palyginimo skaičiai yra `formula_check.json`.
 
 `features.py:Prepare.fit` apskaičiuoja mokymo medianą kiekvienam matavimo požymiui. `transform` naudoja ją trūkstamai reikšmei užpildyti. Kaukė išsaugoma PRIEŠ užpildymą. SVR standartizuojami tik 32 matavimų požymiai; sin/cos ir kaukės nekeičia mastelio.
 
-Svertinė SVR mokymo pavyzdžiams, kurių CO yra ne mažesnis nei vien mokymo duomenimis apskaičiuotas q95, suteikia didesnį `sample_weight`. Ši idėja paremta Zhen ir kt. (2025), DOI 10.1016/j.atmosenv.2024.120952; `q95` ir `w=5` yra šio projekto validuota adaptacija. Ji didina retų aukštų reikšmių jautrį, bet gali mažinti preciziškumą.
+Svertinė SVR mokymo pavyzdžiams, kurių CO yra ne mažesnis nei vien mokymo duomenimis apskaičiuotas q95, suteikia didesnį `sample_weight`. Ši idėja paremta Zhen ir kt. (2025), DOI 10.1016/j.atmosenv.2024.120952; `q95` ir `w=5` yra šio projekto validavimo duomenimis patikrintas pritaikymas. Ji didina retų aukštų reikšmių jautrį, bet gali mažinti preciziškumą.
 
 ## Nematytas bandymas
 
@@ -40,11 +40,10 @@ Po kodo pakeitimo paleiskite `python -m unittest discover -s tests -v`. Negalima
 ## Klausimai, į kuriuos reikia mokėti atsakyti
 
 - Kodėl duomenys neskaidomi atsitiktinai? Gretimos valandos priklausomos, o būsimos sąlygos gali skirtis dėl dreifo.
-- Kodėl nenaudojamas CO vėlinimas modelyje? Paslėpto intervalo viduje jis neprieinamas; baseline jį naudoja tik iki spragos.
+- Kodėl nenaudojamas CO vėlinimas modelyje? Paslėpto intervalo viduje jis neprieinamas; atskaitos metodas jį naudoja tik iki spragos.
 - Kodėl pirmos 24 valandos atmetamos kiekvienoje dalyje? Kad istoriniai požymiai eksperimente nekirstų dalių ribų.
 - Kuo skiriasi MAE ir blokų MAE? Pirmoji vienodai sveria valandas, antroji – blokus, kuriuose žinomų etalonų gali būti skirtingai.
-- Kodėl neapibrėžtas precision nėra nulis? Kai nėra prognozuotų ekstremumų, vardiklis lygus nuliui.
+- Kodėl neapibrėžtas preciziškumas nėra nulis? Kai nėra prognozuotų ekstremumų, vardiklis lygus nuliui.
 - Ar q95 yra pavojingos taršos norma? Ne, tik mokymo skirstinio statistinė riba.
 - Ar geras streso testo rezultatas leidžia diegti? Ne; reikia naujos vietos, naujo laikotarpio ir patikimo etalono patikros.
 - Kaip pagrįstas AI indėlis? Kodo testais, duomenų kilme ir apskaičiuotais failais, ne AI teiginiu.
-

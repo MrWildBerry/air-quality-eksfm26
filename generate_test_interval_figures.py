@@ -104,11 +104,11 @@ def conclusions(kind: str, row: pd.Series, measures: pd.DataFrame, truth: pd.Ser
     elif kind == "blogiausias_rf":
         common.append(f"RF MAE={measures.loc['RF','mae']:.3f}; tai didžiausia reikšmė tarp {int(row.total_blocks)} 24 val. blokų.")
     elif kind == "tikras_ekstremumas":
-        common.append(f"RF/SVR/weighted SVR prognozuoti pikai: {measures.loc['RF','peak_prediction']:.2f} / {measures.loc['SVR','peak_prediction']:.2f} / {measures.loc['SVR_W','peak_prediction']:.2f} mg/m³.")
+        common.append(f"RF/SVR/svertinės SVR prognozuoti pikai: {measures.loc['RF','peak_prediction']:.2f} / {measures.loc['SVR','peak_prediction']:.2f} / {measures.loc['SVR_W','peak_prediction']:.2f} mg/m³.")
     else:
         gain = measures.loc["SVR", "mae"] - measures.loc["SVR_W", "mae"]
         pct = 100 * gain / measures.loc["SVR", "mae"]
-        common.append(f"Weighted SVR MAE={measures.loc['SVR_W','mae']:.3f}, SVR={measures.loc['SVR','mae']:.3f}: pagerėjimas {gain:.3f} mg/m³ ({pct:.1f} %).")
+        common.append(f"Svertinės SVR MAE={measures.loc['SVR_W','mae']:.3f}, SVR={measures.loc['SVR','mae']:.3f}: pagerėjimas {gain:.3f} mg/m³ ({pct:.1f} %).")
     return common
 
 
@@ -116,7 +116,8 @@ def make_plot(kind: str, row: pd.Series, predictions: pd.DataFrame, threshold: f
     curves, truth = interval_data(predictions, row)
     measures = block_metrics(curves, truth, threshold)
     notes = conclusions(kind, row, measures, truth, threshold)
-    title = (f"{kind.replace('_', ' ').capitalize()}: {row.scenario}, "
+    heading = 'Svertinės SVR pagerėjimas' if kind == 'weighted_svr_pagerėjimas' else kind.replace('_', ' ').capitalize()
+    title = (f"{heading}: {row.scenario}, "
              f"kaukė {int(row.mask_seed)}, blokas {int(row.block_id)}")
 
     fig = plt.figure(figsize=(13, 7.3), constrained_layout=True)
@@ -168,9 +169,9 @@ def main() -> None:
     html = ["<!doctype html><meta charset='utf-8'><title>Galutinio testo intervalų grafikai</title>",
             "<style>body{font-family:Arial,sans-serif;max-width:1280px;margin:28px auto;line-height:1.45}img{max-width:100%;border:1px solid #ddd}h1{margin-bottom:4px}p{color:#333}</style>",
             "<h1>Galutinio testo 24 val. intervalų analizė</h1>",
-            "<p>Grafikai sukurti iš užfiksuoto vienkartinio testo prognozių. Geltonas plotas žymi CO etalono slėpimo intervalą.</p>"]
+            "<p>Grafikai sukurti iš užrakintos galutinės konfigūracijos testavimo prognozių. Geltonas plotas žymi CO etalono slėpimo intervalą.</p>"]
     for item in report:
-        html += [f"<h2>{item['kind'].replace('_', ' ').capitalize()}</h2>", f"<img src='{item['image']}' alt='{item['kind']}'>",
+        html += [f"<h2>{('Svertinės SVR pagerėjimas' if item['kind'] == 'weighted_svr_pagerėjimas' else item['kind'].replace('_', ' ').capitalize())}</h2>", f"<img src='{item['image']}' alt='{item['kind']}'>",
                  "<ol>" + "".join(f"<li>{note}</li>" for note in item["notes"]) + "</ol>"]
     (out / "ataskaita_intervalai.html").write_text("\n".join(html), encoding="utf-8")
     print(f"Sukurta {len(report)} grafikų: {out}")
@@ -178,4 +179,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
