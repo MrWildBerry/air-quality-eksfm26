@@ -73,7 +73,7 @@ Vartotojui aiškiai leidus vykdyti testą, AI sukūrė [`config_final_locked.yam
 - SVR: `C=10`, `epsilon=0,05`, `gamma=0,01`;
 - weighted SVR: tie patys SVR parametrai ir `w=5`.
 
-Tuomet vieną kartą paleistas `results_final_locked/`. Po testo AI nekeitė modelių hiperparametrų ir nepaleido naujo modelių atrankos ciklo.
+Užrakinta galutinė konfigūracija po validavimo galutiniame etape testuota vieną kartą (`results_final_locked/`). Ankstesnis testinis paleidimas egzistavo; tai nėra teiginys, kad testavimo duomenys iki šio etapo niekada nebuvo naudoti. Po testo AI nekeitė modelių hiperparametrų ir nepaleido naujo modelių atrankos ciklo.
 
 Visų 51 testavimo kaukių aritmetiniai vidurkiai:
 
@@ -93,10 +93,10 @@ AI sugeneravo keturis 24 val. testinius grafikus su faktine CO kreive, visų pen
 
 | Grafikas | Automatinis parinkimo kriterijus |
 |---|---|
-| `tipinis_geras.png` | RF bloko MAE artimiausias visų 24 val. blokų RF medianai; maksimumas žemiau q95. |
+| `tipinis_geras.png` | A/24 scenarijaus RF bloko MAE artimiausias A/24 blokų RF MAE medianai; maksimumas žemiau q95. |
 | `blogiausias_rf.png` | Didžiausias RF 24 val. bloko MAE. |
 | `tikras_ekstremumas.png` | Didžiausias tikras CO maksimumas tarp 24 val. blokų. |
-| `weighted_svr_pagerėjimas.png` | Didžiausias weighted SVR MAE sumažėjimas, palyginti su baziniu SVR. |
+| `weighted_svr_pagerėjimas.png` | Didžiausias svertinės SVR MAE sumažėjimas, palyginti su baziniu SVR, tik A/24 scenarijuje. |
 
 Šie grafikai yra `results_final_locked/interval_figures/`; atrankos kriterijai, datos ir kiekvieno metodo blokinės metrikos išsaugotos `selected_intervals.json`.
 
@@ -137,4 +137,20 @@ AI atliko literatūros paiešką ir palyginimo svarstymus vartotojo prašymu. Pi
 Šaltinis pagrindžia sample-weighting pagrįstos SVR-W idėjos svarstymą sprendžiant retų aukštų oro teršalo reikšmių nuvertinimą. Jis tiesiogiai nepagrindžia šio projekto q95 ribos ar `w=5`; todėl šie parametrai dokumentacijoje vadinami tik šio projekto validuota adaptacija.
 
 `extreme` scenarijus yra retrospektyvus streso testas, nes blokų atrankai naudoja testinio CO etalono ekstremumus. Jo negalima pateikti kaip nešališko realaus laiko spragų dažnio ar tikėtinos eksploatacinės paklaidos įverčio.
+
+## Studento atliktos patikros
+
+Toliau pateiktas neužpildytas patikrų sąrašas. AI nepatvirtina, kad studentas jas atliko. Studentas turi pažymėti tik faktiškai atliktus punktus ir, jei reikia, įrašyti datą bei savo paaiškinimą.
+
+- [ ] Galiu paaiškinti tos pačios valandos CO atkūrimo ir ateities prognozavimo skirtumą.
+- [ ] Galiu paaiškinti chronologinio duomenų skaidymo priežastį.
+- [ ] Peržiūrėjau MAE, RMSE, jautrį ir preciziškumą bei galiu paaiškinti jų prasmę.
+- [ ] Patikrinau, kad CO(GT) nepatenka į modelio įvestį.
+- [ ] Peržiūrėjau SVR-W validavimo lentelę ir suprantu w=5 pasirinkimą vietoje w=8.
+- [ ] Peržiūrėjau blogiausią intervalą ir suprantu, kodėl mažas bendras MAE neapsaugo nuo atskiro piko nuvertinimo.
+- [ ] Susipažinau su FINAL_AUDIT.md įvardytomis WARNING būsenomis ir jų priežastimis.
+
+## Pateikimo nuoseklumo patikslinimai
+
+Pagal vartotojo recenziją pagrindiniai kreivių pavyzdžiai apriboti A/24 scenarijumi; streso pavyzdžiai palikti klaidų analizėje. Patikslinta Hua ir kt. (2024) alternatyvų interpretacija, README metodų sąrašas ir galutinio etapo vienkartinio testo formuluotė. Grafikai perskaičiuoti iš išsaugotų prognozių, modeliai nepermokyti ir hiperparametrai nekeisti.
 

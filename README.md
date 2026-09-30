@@ -2,7 +2,7 @@
 
 Dominykas Kublickas · EKSfm-26 · Intelektualiosios sistemos
 
-Programa atkuria tos pačios valandos CO koncentraciją mg/m³ pagal penkis PT08 jutiklių kanalus, temperatūrą ir drėgmę. Įgyvendintas koliokviumo plane numatytas laike atskirtas RF, SVR, paskutinės žinomos reikšmės ir paros valandos vidurkio palyginimas.
+Programa atkuria tos pačios valandos CO koncentraciją mg/m³ pagal penkis PT08 jutiklių kanalus, temperatūrą ir drėgmę. Įgyvendintas laike atskirtas paskutinės žinomos reikšmės, paros valandos vidurkio, RF, SVR ir svertinės SVR (SVR-W) palyginimas.
 
 ## Nuo ko pradėti
 

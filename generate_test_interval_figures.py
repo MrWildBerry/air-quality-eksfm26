@@ -24,7 +24,7 @@ LABELS = {
     "hour_mean": "Paros valandos vidurkis",
     "RF": "RF",
     "SVR": "SVR",
-    "SVR_W": "Weighted SVR (w=5)",
+    "SVR_W": "Svertinė SVR (w=5)",
 }
 COLORS = {
     "last": "#777777", "hour_mean": "#9c755f", "RF": "#1f77b4",
@@ -51,12 +51,13 @@ def per_block(predictions: pd.DataFrame) -> pd.DataFrame:
 
 def choose_blocks(stats: pd.DataFrame, threshold: float) -> list[tuple[str, pd.Series]]:
     """Parenka blokus pagal iš anksto aprašytus skaitinius kriterijus."""
-    typical = stats[stats["max_true"] < threshold].copy()
-    typical["distance_from_rf_median"] = (typical["RF"] - stats["RF"].median()).abs()
+    primary = stats[stats["scenario"].eq("A")].copy()
+    typical = primary[primary["max_true"] < threshold].copy()
+    typical["distance_from_rf_median"] = (typical["RF"] - primary["RF"].median()).abs()
     typical = typical.sort_values(["distance_from_rf_median", "scenario", "mask_seed", "block_id"]).iloc[0]
     worst_rf = stats.sort_values(["RF", "scenario", "mask_seed", "block_id"], ascending=[False, True, True, True]).iloc[0]
     extreme = stats.sort_values(["max_true", "scenario", "mask_seed", "block_id"], ascending=[False, True, True, True]).iloc[0]
-    improved = stats.sort_values(["weighted_gain_vs_svr", "scenario", "mask_seed", "block_id"], ascending=[False, True, True, True]).iloc[0]
+    improved = primary.sort_values(["weighted_gain_vs_svr", "mask_seed", "block_id"], ascending=[False, True, True]).iloc[0]
     return [
         ("tipinis_geras", typical),
         ("blogiausias_rf", worst_rf),
@@ -99,7 +100,7 @@ def conclusions(kind: str, row: pd.Series, measures: pd.DataFrame, truth: pd.Ser
         f"Mažiausias bloko MAE: {LABELS[best]} = {measures.loc[best, 'mae']:.3f} mg/m³.",
     ]
     if kind == "tipinis_geras":
-        common.append(f"RF MAE={measures.loc['RF','mae']:.3f}; tai artimiausia visų 24 val. blokų RF medianai ({row.RF:.3f}).")
+        common.append(f"RF MAE={measures.loc['RF','mae']:.3f}; pasirinktas neekstremalus A/24 blokas, artimiausias A/24 blokų RF MAE medianai.")
     elif kind == "blogiausias_rf":
         common.append(f"RF MAE={measures.loc['RF','mae']:.3f}; tai didžiausia reikšmė tarp {int(row.total_blocks)} 24 val. blokų.")
     elif kind == "tikras_ekstremumas":
