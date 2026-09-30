@@ -61,3 +61,4 @@ def fit_limited(kind, params, X, y, destination, cfg, seed=42, weights=None, dea
 
 if __name__ == '__main__':
     worker(sys.argv[1])
+

@@ -6,8 +6,8 @@ Programa atkuria tos pačios valandos CO koncentraciją mg/m³ pagal penkis PT08
 
 ## Nuo ko pradėti
 
-1. Šioje GitHub kopijoje pateiktas kodas ir galutinio sprendimo PDF. Atidarykite PDF rezultatams peržiūrėti. Programos darbalaukio kopijoje jau yra ir modeliai bei HTML ataskaita.
-2. Norėdami atkurti modelius ir visus rezultatų failus, įdiekite priklausomybes ir paleiskite pagrindinį eksperimentą (arba `Air_Quality.cmd` meniu pasirinkite `2`). Tuomet bus galima naudoti ataskaitos ir prognozavimo meniu.
+1. Atidarykite `Air_Quality.cmd`. Pasirinkite `1`, kad naršyklėje pamatytumėte jau apskaičiuotus rezultatus. Rezultatų peržiūrai Python ir internetas nereikalingi.
+2. Perskaitykite `results/ataskaita.html`: rezultatai, grafikai, hipotezės išvada, abliacijos, atsparumas ir klaidų analizė.
 3. Gynimui naudokite vadovą `GYNIMAS.md`.
 
 ## Paleidimas iš terminalo
@@ -26,7 +26,7 @@ Aktyvavus aplinką vienintelė pagrindinio eksperimento komanda:
 python run_experiment.py --config config.yaml
 ```
 
-Jei rezultatų aplankas jau užpildytas, naujas paleidimas kuria `results_YYYYMMDD_HHMMSS`; ankstesni rezultatai išlieka. `--output mano_rezultatai` leidžia nurodyti kitą aplanką. UCI CSV atsisiunčiamas automatiškai tik tada, kai `data/AirQualityUCI.csv` neegzistuoja. GitHub kopijoje duomenys, modeliai ir generuojami rezultatai neplatinami. Pirmo eksperimento metu CSV atsisiunčiamas automatiškai. Po vieno eksperimento modeliai ir prognozavimo funkcija paruošti naudojimui.
+Jei rezultatų aplankas jau užpildytas, naujas paleidimas kuria `results_YYYYMMDD_HHMMSS`; ankstesni rezultatai išlieka. `--output mano_rezultatai` leidžia nurodyti kitą aplanką. UCI CSV atsisiunčiamas automatiškai tik tada, kai `data/AirQualityUCI.csv` neegzistuoja. Pateiktoje projekto kopijoje yra išbandytas duomenų failas, todėl kartotiniam eksperimentui po bibliotekų įdiegimo internetas nereikalingas.
 
 ## Nematytas failas ir prognozės
 
@@ -45,9 +45,9 @@ Išvestis: `timestamp`, `co_hat_mg_m3`, `source`, `quality_flag`, `model_version
 - CSV valymas, -200 keitimas į NaN, prieštaringų dublikatų kanalo žymėjimas, pilnas valandinis tinklelis ir SHA-256.
 - 60/20/20 chronologinės dalys, pirmų 24 valandų pašalinimas kiekvienoje dalyje; tik mokymo medianos ir SVR skalės.
 - 68 požymiai: 8 dabartiniai, 24 istoriniai, 32 trūkumo indikatoriai ir 4 cikliniai laiko požymiai. Jokių GT įvesčių.
-- 18 RF ir 18 SVR konfigūracijų, atranka pagal A/24h validavimą su 17, 42, 101 slėpimo sėklomis. Iki 2 % MAE skirtumo sprendžiama pagal recall, vėliau mokymo ir prognozavimo laiką.
+- 18 RF, 18 SVR ir 90 weighted-SVR konfigūracijų. Weighted SVR aukštoms mokymo CO reikšmėms taiko validuojamą svorį `w ∈ {1,2,3,5,8}`; atranka pagal A/24h validavimą su 17, 42, 101 slėpimo sėklomis. Iki 2 % MAE skirtumo sprendžiama pagal recall, vėliau mokymo ir prognozavimo laiką.
 - 6/24/72 valandų blokai, apie 20 % padengimas; A, vieno ir visų jutiklių gedimai, triukšmas, dreifas, sistemingi rytiniai ir ekstremumų blokai.
-- Abliacijos be istorijos ir be trūkumo kaukių; RF modelio sėklos 17 ir 101; SVR ekstremumų svoris 3.
+- Abliacijos be istorijos ir be trūkumo kaukių; RF modelio sėklos 17 ir 101; weighted SVR ekstremumų svoris parenkamas validavime iš nustatyto tinklelio.
 - MAE, blokų MAE, RMSE, recall, precision, TP/FN/FP, ekstremumų MAE ir ženklinė paklaida; nulinio vardiklio santykiai neapibrėžti.
 - 1 000 porinių blokų bootstrap kartojimų kiekvienai A/24h kaukei atskirai, klaidos pagal mėnesį, penki blogiausi intervalai, visi nepastebėti ekstremumų epizodai ir baseline laimėjimai.
 - Vieno mokymo proceso 120 s riba, iki 4 gijų, 8 GB mokymo proceso ir jo vaikinių procesų RSS riba, 2 valandų eksperimento biudžetas. Tarp etapų tikrinama bendra laiko riba; paskutinio vertinimo ir ataskaitos generavimo pabaiga gali ją nežymiai viršyti. 8 GB riba taikoma mokymo procesui, o ne visos operacinės sistemos atminčiai.
@@ -79,16 +79,21 @@ Išvestis: `timestamp`, `co_hat_mg_m3`, `source`, `quality_flag`, `model_version
 python -m unittest discover -s tests -v
 ```
 
+Prieš galutinį testą galima paleisti tik validavimą ir peržiūrėti `selection.json`, `validation_metrics.csv` bei kiekvieno kandidato suvestinę `validation_summary.csv`:
+
+```text
+python run_experiment.py --config config.yaml --output results_validation --validation-only
+```
+
+Šis režimas sąmoningai negeneruoja testo kaukių, prognozių, metrikų ar ataskaitos.
+
 RF formulė tikrinama ir realaus eksperimento metu, o rezultatas išsaugomas `results/formula_check.json`. Visos galutinės lentelės generuojamos iš `metrics.csv` ir `predictions.csv.gz`. `validation_metrics.csv` atskirai saugo atrankos rezultatus. Įverčiai natūralių spragų vietose nėra naudojami tikslumo skaičiavimui, nes tikras CO nežinomas.
 
 ## Šaltiniai ir ribos
 
 Duomenys: Vito, S. (2008), UCI Air Quality, DOI https://doi.org/10.24432/C59K5F; https://archive.ics.uci.edu/dataset/360/air+quality. Oficialus puslapis tikrintas kuriant programą. Puslapyje yra ir CC BY 4.0 žyma, ir senesnė tik tyrimų paskirties pastaba; šis projektas skirtas akademiniam eksperimentui.
 
-RF ir SVR metodų literatūrinis pagrindimas išlaikytas vartotojo pateiktame koliokviumo plane. Nauji nepatikrinti moksliniai teiginiai ar straipsnių rezultatų skaičiai nepridedami. Šio projekto tikslumas grindžiamas jo paties eksperimentu.
+RF ir SVR metodų literatūrinis pagrindimas pateiktas atnaujintame koliokviumo plane. Svertinės SVR idėją oro teršalų retų aukštų reikšmių nuvertinimui pagrindžia Zhen, L. ir kt. (2025), *Data imbalance causes underestimation of high ozone pollution in machine learning models: A weighted support vector regression solution*, *Atmospheric Environment*, 343, 120952, DOI https://doi.org/10.1016/j.atmosenv.2024.120952. Straipsnis nagrinėja ozoną ir sample-weighting SVR-W; šiame projekte mokymo q95 ir `w=5` yra atskirai validuota CO adaptacija, ne tiesioginis autoriaus algoritmo pakartojimas. Šio projekto tikslumas grindžiamas jo paties eksperimentu.
 
 Šis prototipas nėra teisinis oro kokybės indeksas ar sertifikuotas matavimo prietaisas. Kokybės žymos yra euristinės. Galutinį gyvą gynimą, nematytą dėstytojo bandymą ir savarankišką kodo pakeitimą atlieka studentas.
 
-## Galutinio darbo pateikimas
-
-Privati kodo repozitorija: https://github.com/MrWildBerry/air-quality-eksfm26. Dėstytojo paskyra: `serackis`. Galutinis sprendimas pateiktas faile `Galutinis_sprendimas_D_Kublickas_EKSfm26.pdf`. Rezultatai ir modeliai atkuriami viena aukščiau nurodyta komanda; originalios užduoties tekstas įtrauktas į PDF priedą.

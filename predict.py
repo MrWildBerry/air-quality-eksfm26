@@ -30,3 +30,4 @@ if __name__=='__main__':
     parser.add_argument('--output',default='predictions/new_predictions.csv')
     args=parser.parse_args()
     predict_file(args.input,args.model,args.output)
+

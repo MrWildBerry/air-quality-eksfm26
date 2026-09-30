@@ -39,7 +39,7 @@ def mean_metric(rows, key):
     a = np.array([r.get(key, np.nan) for r in rows], dtype=float)
     return float(np.nanmean(a)) if np.isfinite(a).any() else np.nan
 
-def run(config_path, output_override=None):
+def run(config_path, output_override=None, stop_after_validation=False):
     started = time.monotonic()
     cfg = yaml.safe_load(Path(config_path).read_text(encoding='utf-8'))
     out = Path(output_override or cfg['output']).resolve()
@@ -69,7 +69,7 @@ def run(config_path, output_override=None):
     sensor_std = float(train.loc[eligible, SENSORS[0]].std(ddof=0))
     if not np.isfinite(sensor_std): sensor_std = 0.
     bounds = dict(min=train_min, max=train_max)
-    model_info, tuning, failures, mask_audit = [], [], [], []
+    model_info, tuning, candidate_summaries, failures, mask_audit = [], [], [], [], []
     validation = pieces['validation']
     val_cases = []
     for seed in cfg['mask_seeds']:
@@ -91,17 +91,21 @@ def run(config_path, output_override=None):
             scores.append(metrics(frame_for(validation, visible, ids, pred, np.zeros(len(pred), bool), features, name), q))
         baseline_rows.append(dict(id=name, mae=mean_metric(scores, 'mae'), recall=mean_metric(scores, 'recall'), seconds=elapsed))
     best_baseline = choose(baseline_rows)
-    winners, selected_rows = {}, []
-    for kind in ('RF', 'SVR'):
+    winners, candidate_rows, family_winner_rows = {}, [], {}
+    search_specs = [('RF', 'RF', None), ('SVR', 'SVR', None)]
+    search_specs.extend(('SVR_W', 'SVR', float(weight)) for weight in cfg['weighted_svr']['high_target_weights'])
+    for label, kind, high_weight in search_specs:
         candidates = []
         for number, params in enumerate(ParameterGrid(cfg[kind.lower()])):
-            ident = f'{kind}_{number:02d}'
+            suffix = '' if high_weight is None else f'_w{high_weight:g}'
+            ident = f'{label}_{number:02d}{suffix}'
             if time.monotonic() > deadline:
                 failures.append(dict(id=ident, status='total_timeout', params=params)); continue
             print(f'Mokymas {ident}: {params}', flush=True)
             path = work / f'{ident}.joblib'
-            model, timing = fit_limited(kind, params, X, y, path, cfg, cfg['model_seed'], deadline=deadline)
-            info = dict(id=ident, kind=kind, params=params, **timing)
+            weights = None if high_weight is None else np.where(y >= q, high_weight, 1.)
+            model, timing = fit_limited(kind, params, X, y, path, cfg, cfg['model_seed'], weights, deadline)
+            info = dict(id=ident, kind=label, estimator=kind, high_target_weight=high_weight, params=params, **timing)
             model_info.append(info)
             if model is None:
                 failures.append(info); continue
@@ -110,21 +114,32 @@ def run(config_path, output_override=None):
                 t = time.perf_counter()
                 pred, clipped = predict(model, features)
                 elapsed += time.perf_counter()-t
-                score = metrics(frame_for(validation, visible, ids, pred, clipped, features, kind), q)
+                score = metrics(frame_for(validation, visible, ids, pred, clipped, features, label), q)
                 scores.append(score)
-                tuning.append(dict(id=ident, kind=kind, mask_seed=seed, **score))
-            candidates.append(dict(id=ident, mae=mean_metric(scores, 'mae'), recall=mean_metric(scores, 'recall'),
-                                   seconds=timing['fit_seconds'] + elapsed, params=params, path=str(path)))
+                tuning.append(dict(id=ident, kind=label, estimator=kind, high_target_weight=high_weight,
+                                   mask_seed=seed, **score))
+            candidate = dict(id=ident, kind=label, estimator=kind, mae=mean_metric(scores, 'mae'),
+                             recall=mean_metric(scores, 'recall'), precision=mean_metric(scores, 'precision'),
+                             extreme_mae=mean_metric(scores, 'extreme_mae'), fit_seconds=timing['fit_seconds'],
+                             predict_seconds=elapsed, seconds=timing['fit_seconds'] + elapsed, params=params,
+                             high_target_weight=high_weight, path=str(path))
+            candidates.append(candidate)
+            candidate_summaries.append(candidate)
+            candidate_rows.append(candidate)
             pd.DataFrame(tuning).to_csv(out / 'validation_metrics.csv', index=False)
+            pd.DataFrame(candidate_summaries).to_csv(out / 'validation_summary.csv', index=False)
             write_json(out / 'training_audit.json', model_info)
-        ident = choose(candidates)
-        row = next(r for r in candidates if r['id'] == ident)
-        winners[kind] = joblib.load(row['path'])
-        selected_rows.append(row)
-    chosen_id = choose(selected_rows)
-    chosen = chosen_id.split('_')[0]
+        family_id = choose(candidates)
+        family_winner_rows[label] = next(r for r in candidates if r['id'] == family_id)
+        winners[label] = joblib.load(family_winner_rows[label]['path'])
+    chosen_id = choose(candidate_rows)
+    chosen_row = next(r for r in candidate_rows if r['id'] == chosen_id)
+    chosen = next(label for label, _, _ in sorted(search_specs, key=lambda item: len(item[0]), reverse=True)
+                  if chosen_id.startswith(label + '_'))
+    winners[chosen] = joblib.load(chosen_row['path'])
     selected = dict(main_model=chosen, baseline=best_baseline, threshold_q95=q,
-                    candidates=selected_rows, baseline_validation=baseline_rows,
+                    main_candidate=chosen_row, candidates=candidate_rows, baseline_validation=baseline_rows,
+                    weighted_svr_weights=cfg['weighted_svr']['high_target_weights'],
                     rule='A/24h mean MAE; <=2% tie: recall then fit+prediction seconds',
                     refit_after_validation=False)
     write_json(out / 'selection.json', selected)  # Testas dar nevertintas.
@@ -136,16 +151,19 @@ def run(config_path, output_override=None):
     shutil.copy2(models_dir / f'{chosen}.joblib', models_dir / 'selected.joblib')
     write_json(out / 'formula_check.json', verify_forest_formula(winners['RF'], X.iloc[:5]))
     write_json(out / 'preprocessing.json', {k: dict(medians=m.named_steps['prepare'].medians_.to_dict(),
-               empty_columns=m.named_steps['prepare'].empty_columns_, columns=m.named_steps['prepare'].columns_,
-               means=m.named_steps['prepare'].means_.to_dict(), scales=m.named_steps['prepare'].scales_.to_dict()) for k,m in winners.items()})
+                empty_columns=m.named_steps['prepare'].empty_columns_, columns=m.named_steps['prepare'].columns_,
+                means=m.named_steps['prepare'].means_.to_dict(), scales=m.named_steps['prepare'].scales_.to_dict()) for k,m in winners.items()})
+    if stop_after_validation:
+        write_json(out / 'test_status.json', dict(status='locked_not_run',
+                   reason='validation-only run: no test masks, predictions, metrics, or report were generated'))
+        print(f'Validavimas baigtas. Testas užrakintas: {out / "test_status.json"}', flush=True)
+        return out
     variants = {k: (m, True, True) for k,m in winners.items()}
-    rf_params = next(r['params'] for r in selected_rows if r['id'].startswith('RF'))
-    svr_params = next(r['params'] for r in selected_rows if r['id'].startswith('SVR'))
+    rf_params = family_winner_rows['RF']['params']
     extra = [('RF_no_lags', 'RF', False, True, 42, None, rf_params),
              ('RF_no_masks', 'RF', True, False, 42, None, rf_params),
              ('RF_seed17', 'RF', True, True, 17, None, rf_params),
-             ('RF_seed101', 'RF', True, True, 101, None, rf_params),
-             ('SVR_W', 'SVR', True, True, 42, np.where(y >= q, 3., 1.), svr_params)]
+             ('RF_seed101', 'RF', True, True, 101, None, rf_params)]
     for name, kind, lags, masks, seed, weights, params in extra:
         print(f'Papildomas bandymas: {name}', flush=True)
         if time.monotonic() > deadline:
@@ -212,5 +230,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', default='config.yaml')
     parser.add_argument('--output', help='Naujas rezultatų aplankas')
+    parser.add_argument('--validation-only', action='store_true',
+                        help='Sustoti po validavimo; testo kaukių ir metrikų negeneruoti.')
     args = parser.parse_args()
-    run(args.config, args.output)
+    run(args.config, args.output, args.validation_only)
+

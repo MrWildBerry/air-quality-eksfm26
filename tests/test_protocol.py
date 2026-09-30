@@ -83,6 +83,12 @@ class ProtocolTests(unittest.TestCase):
         rows=[dict(id='a',mae=1,recall=.5,seconds=1),dict(id='b',mae=1.01,recall=.6,seconds=2),dict(id='c',mae=1.1,recall=1,seconds=.1)]
         self.assertEqual(choose(rows),'b')
 
+    def test_weighted_svr_weights_only_training_extremes(self):
+        threshold = self.d[TARGET].iloc[:100].quantile(.95)
+        weights = np.where(self.d[TARGET].iloc[:100] >= threshold, 5., 1.)
+        self.assertTrue(np.all(weights[self.d[TARGET].iloc[:100] < threshold] == 1.))
+        self.assertTrue(np.all(weights[self.d[TARGET].iloc[:100] >= threshold] == 5.))
+
     def test_split_not_dependent_on_target(self):
         d=self.d.copy(); d[TARGET]=np.nan
         a,_=split_data(self.d); b,_=split_data(d)
@@ -102,3 +108,4 @@ class ProtocolTests(unittest.TestCase):
         self.assertTrue(loaded.iloc[2].isna().all())
 
 if __name__ == '__main__': unittest.main()
+

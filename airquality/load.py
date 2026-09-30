@@ -59,3 +59,4 @@ def load_data(path, require_target=True):
                  missing_by_column=data.isna().sum().to_dict(), start=str(data.index.min()),
                  end=str(data.index.max()), timezone='Naive local time; DST not inferred')
     return data, audit
+

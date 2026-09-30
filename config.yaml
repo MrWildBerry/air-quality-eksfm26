@@ -10,6 +10,9 @@ fit_timeout_seconds: 120
 total_budget_seconds: 7200
 memory_limit_gb: 8
 bootstrap_samples: 1000
+weighted_svr:
+  # Kandidatai validuojami kartu su įprastu SVR; 1.0 reiškia jo ekvivalentą.
+  high_target_weights: [1, 2, 3, 5, 8]
 rf:
   n_estimators: [300]
   max_depth: [8, 16, null]
@@ -19,3 +22,4 @@ svr:
   C: [1, 10, 100]
   epsilon: [0.05, 0.20]
   gamma: [scale, 0.01, 0.1]
+

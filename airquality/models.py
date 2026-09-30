@@ -27,3 +27,4 @@ def verify_forest_formula(model, X):
     return {'trees': len(forest.estimators_), 'first_tree_leaf_values': leaf_values[:3, 0].tolist(),
             'mean_all_trees': float(manual[0]), 'sklearn_prediction': float(model.predict(X.iloc[:1])[0]),
             'maximum_difference': float(np.max(np.abs(manual-model.predict(X))))}
+

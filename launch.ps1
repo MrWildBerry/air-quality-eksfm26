@@ -31,3 +31,4 @@ switch ($Action) {
     }
 }
 if ($LASTEXITCODE -ne 0) { throw "Programa baigta su klaida: $LASTEXITCODE" }
+

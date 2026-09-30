@@ -54,3 +54,4 @@ def paired_bootstrap(predictions, baseline, iterations=1000):
         results.append(dict(mask_seed=int(seed), blocks=len(blocks), difference_mae=float(blocks['sum'].sum()/blocks['count'].sum()),
                             ci_low=float(np.quantile(values, .025)), ci_high=float(np.quantile(values, .975))))
     return results
+

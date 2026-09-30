@@ -42,3 +42,4 @@ class Prepare(BaseEstimator, TransformerMixin):
         if self.scale:
             result[self.measurements_] = (result[self.measurements_] - self.means_) / self.scales_
         return result.to_numpy(dtype=float)
+

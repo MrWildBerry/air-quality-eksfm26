@@ -2,9 +2,9 @@
 
 ## Trumpas pristatymas
 
-Sprendžiama tos pačios valandos CO atkūrimo problema. Penki pigūs PT08 kanalai ir meteorologija naudojami tada, kai etalonas nežinomas. Tai nėra kitos valandos prognozė ir nėra kelių miesto stočių erdvinis modelis. UCI rinkinyje yra viena matavimo vieta.
+Sprendžiama tos pačios valandos CO atkūrimo problema. Penki pigūs PT08 kanalai ir meteorologija naudojami tada, kai CO etalonas nežinomas. Tai nėra kitos valandos prognozė ir nėra kelių miesto stočių erdvinis modelis. UCI rinkinyje yra viena matavimo vieta.
 
-Pirmiausia parodykite `results/ataskaita.html`, tada `results/selection.json` ir `results/split.json`. Paaiškinkite, kad RF buvo pradinė hipotezė, o galutinis metodas išrinktas validavime. Testo rezultatas gali būti neigiamas; jo negalima pakeisti parenkant kitus parametrus pagal testą.
+Pirmiausia parodykite `results_final_locked/ataskaita.html`, tada `results_final_locked/selection.json`, `results_final_locked/split.json` ir `results_weighted_validation_final/test_status.json`. Paaiškinkite, kad RF ir SVR buvo palyginti su svertine SVR, o galutinis metodas `SVR_W, w=5` išrinktas validavime. Testo rezultatas gali būti neigiamas; jo negalima pakeisti parenkant kitus parametrus pagal testą.
 
 ## Formulė ir kodas
 
@@ -17,6 +17,8 @@ co_hat(x) = max(0, (T_1(x) + ... + T_B(x)) / B)
 Kiekvienas medis, tikrindamas `x[j] <= threshold`, pasiekia lapą. Lapo reikšmė yra mokymo taškų CO vidurkis tame lape, įskaitant bootstrap pasikartojimų svorį. `airquality/models.py:create_model` nustato `bootstrap=True` ir `criterion='squared_error'`. `verify_forest_formula` apskaičiuoja atskirų medžių prognozes ir jų vidurkį, palygina su `model.predict`. `predict` taiko neneigiamumo ribojimą. Realūs palyginimo skaičiai yra `formula_check.json`.
 
 `features.py:Prepare.fit` apskaičiuoja mokymo medianą kiekvienam matavimo požymiui. `transform` naudoja ją trūkstamai reikšmei užpildyti. Kaukė išsaugoma PRIEŠ užpildymą. SVR standartizuojami tik 32 matavimų požymiai; sin/cos ir kaukės nekeičia mastelio.
+
+Svertinė SVR mokymo pavyzdžiams, kurių CO yra ne mažesnis nei vien mokymo duomenimis apskaičiuotas q95, suteikia didesnį `sample_weight`. Ši idėja paremta Zhen ir kt. (2025), DOI 10.1016/j.atmosenv.2024.120952; `q95` ir `w=5` yra šio projekto validuota adaptacija. Ji didina retų aukštų reikšmių jautrį, bet gali mažinti preciziškumą.
 
 ## Nematytas bandymas
 
@@ -45,3 +47,4 @@ Po kodo pakeitimo paleiskite `python -m unittest discover -s tests -v`. Negalima
 - Ar q95 yra pavojingos taršos norma? Ne, tik mokymo skirstinio statistinė riba.
 - Ar geras streso testo rezultatas leidžia diegti? Ne; reikia naujos vietos, naujo laikotarpio ir patikimo etalono patikros.
 - Kaip pagrįstas AI indėlis? Kodo testais, duomenų kilme ir apskaičiuotais failais, ne AI teiginiu.
+

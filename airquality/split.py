@@ -11,3 +11,4 @@ def split_data(data, warmup=24):
                        warmup_excluded=warmup, known_targets_after_warmup=int(d[TARGET].iloc[warmup:].notna().sum()))
              for name, d in pieces.items()}
     return pieces, audit
+
